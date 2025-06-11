@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Rate Limiter Testing Tool</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .config-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(102, 126, 234, 0.2);
+        }
+
+        .config-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.4em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .config-section h2::before {
+            content: "⚙️";
+            font-size: 1.2em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: #f8f9fa;
+            color: #333;
+            border: 2px solid #e1e1e1;
+        }
+
+        .btn-secondary:hover {
+            background: #e9ecef;
+            border-color: #adb5bd;
+        }
+
+        .btn-danger {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .status-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-card {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .status-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+        }
+
+        .status-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .status-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .results-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+        }
+
+        .results-section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .results-section h2::before {
+            content: "📊";
+            font-size: 1.2em;
+        }
+
+        .log-container {
+            background: #f8f9fa;
+            border: 2px solid #e1e1e1;
+            border-radius: 8px;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            border-radius: 4px;
+            border-left: 4px solid transparent;
+        }
+
+        .log-success {
+            background: rgba(40, 167, 69, 0.1);
+            border-left-color: #28a745;
+            color: #155724;
+        }
+
+        .log-error {
+            background: rgba(220, 53, 69, 0.1);
+            border-left-color: #dc3545;
+            color: #721c24;
+        }
+
+        .log-warning {
+            background: rgba(255, 193, 7, 0.1);
+            border-left-color: #ffc107;
+            color: #856404;
+        }
+
+        .log-info {
+            background: rgba(23, 162, 184, 0.1);
+            border-left-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 10px;
+            background: #e1e1e1;
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+
+        .test-scenarios {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .scenario-card {
+            background: white;
+            border: 2px solid #e1e1e1;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .scenario-card:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+        }
+
+        .scenario-card.active {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .scenario-title {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        .scenario-description {
+            color: #666;
+            font-size: 0.9em;
+            line-height: 1.4;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
+            height: 400px;
+            position: relative;
+            border: 2px solid #e1e1e1;
+        }
+
+        .disabled {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: help;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>API Rate Limiter Testing Tool</h1>
+        
+        <div class="config-section">
+            <h2>API Configuration</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="apiUrl">API Endpoint URL:</label>
+                    <input type="text" id="apiUrl" placeholder="https://api.example.com/endpoint" 
+                           value="https://httpbin.org/delay/1">
+                </div>
+                <div class="form-group">
+                    <label for="httpMethod">HTTP Method:</label>
+                    <select id="httpMethod">
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="headers">Headers (JSON format):</label>
+                    <textarea id="headers" rows="3" placeholder='{"Authorization": "Bearer token", "Content-Type": "application/json"}'></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="requestBody">Request Body (for POST/PUT):</label>
+                    <textarea id="requestBody" rows="3" placeholder='{"key": "value"}'></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h2>Test Scenarios</h2>
+            <div class="test-scenarios">
+                <div class="scenario-card" data-scenario="burst">
+                    <div class="scenario-title">🚀 Burst Test</div>
+                    <div class="scenario-description">Send many requests quickly to test sudden traffic spikes</div>
+                </div>
+                <div class="scenario-card" data-scenario="sustained">
+                    <div class="scenario-title">⏱️ Sustained Load</div>
+                    <div class="scenario-description">Maintain steady request rate over time</div>
+                </div>
+                <div class="scenario-card" data-scenario="gradual">
+                    <div class="scenario-title">📈 Gradual Increase</div>
+                    <div class="scenario-description">Slowly increase request rate to find limits</div>
+                </div>
+                <div class="scenario-card" data-scenario="custom">
+                    <div class="scenario-title">⚙️ Custom Pattern</div>
+                    <div class="scenario-description">Define your own request pattern</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="config-section">
+            <h2>Test Parameters</h2>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="requestsPerSecond" class="tooltip">Requests per Second:
+                        <span class="tooltiptext">How many requests to send each second</span>
+                    </label>
+                    <input type="number" id="requestsPerSecond" value="10" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="testDuration" class="tooltip">Test Duration (seconds):
+                        <span class="tooltiptext">How long to run the test</span>
+                    </label>
+                    <input type="number" id="testDuration" value="30" min="1" max="300">
+                </div>
+                <div class="form-group">
+                    <label for="maxConcurrent" class="tooltip">Max Concurrent Requests:
+                        <span class="tooltiptext">Maximum number of simultaneous requests</span>
+                    </label>
+                    <input type="number" id="maxConcurrent" value="20" min="1" max="100">
+                </div>
+                <div class="form-group">
+                    <label for="timeout" class="tooltip">Request Timeout (ms):
+                        <span class="tooltiptext">How long to wait for each request</span>
+                    </label>
+                    <input type="number" id="timeout" value="5000" min="1000" max="30000">
+                </div>
+            </div>
+        </div>
+
+        <div class="control-buttons">
+            <button class="btn-primary" onclick="startTest()">🚀 Start Test</button>
+            <button class="btn-secondary" onclick="pauseTest()">⏸️ Pause</button>
+            <button class="btn-danger" onclick="stopTest()">⏹️ Stop</button>
+            <button class="btn-secondary" onclick="clearResults()">🗑️ Clear Results</button>
+        </div>
+
+        <div class="status-section">
+            <h2>📊 Test Status</h2>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="status-grid">
+                <div class="status-card">
+                    <div class="status-value" id="requestsSent">0</div>
+                    <div class="status-label">Requests Sent</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="successCount">0</div>
+                    <div class="status-label">Successful</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="rateLimitCount">0</div>
+                    <div class="status-label">Rate Limited</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="errorCount">0</div>
+                    <div class="status-label">Errors</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="avgResponseTime">0ms</div>
+                    <div class="status-label">Avg Response Time</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-value" id="currentRPS">0</div>
+                    <div class="status-label">Current RPS</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="results-section">
+            <h2>Test Results & Logs</h2>
+            <div class="log-container" id="logContainer">
+                <div class="log-entry log-info">Ready to start testing. Configure your API endpoint and click "Start Test".</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="responseChart" width="800" height="400"></canvas>
+        </div>
+    </div>
+
+    <script>
+        // Global test state
+        let testState = {
+            isRunning: false,
+            isPaused: false,
+            startTime: null,
+            requestsSent: 0,
+            successCount: 0,
+            rateLimitCount: 0,
+            errorCount: 0,
+            responseTimes: [],
+            currentScenario: 'burst',
+            testInterval: null,
+            requestQueue: [],
+            activeRequests: 0,
+            chartData: {
+                labels: [],
+                responseTime: [],
+                requestRate: [],
+                errorRate: []
+            }
+        };
+
+        // Chart setup
+        let chart = null;
+        
+        function initChart() {
+            const canvas = document.getElementById('responseChart');
+            const ctx = canvas.getContext('2d');
+            
+            // Simple chart implementation
+            chart = {
+                canvas: canvas,
+                ctx: ctx,
+                data: testState.chartData,
+                draw: function() {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    
+                    // Draw grid
+                    this.ctx.strokeStyle = '#e1e1e1';
+                    this.ctx.lineWidth = 1;
+                    
+                    // Vertical lines
+                    for (let i = 0; i <= 10; i++) {
+                        const x = (this.canvas.width / 10) * i;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x, 0);
+                        this.ctx.lineTo(x, this.canvas.height);
+                        this.ctx.stroke();
+                    }
+                    
+                    // Horizontal lines
+                    for (let i = 0; i <= 10; i++) {
+                        const y = (this.canvas.height / 10) * i;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(0, y);
+                        this.ctx.lineTo(this.canvas.width, y);
+                        this.ctx.stroke();
+                    }
+                    
+                    // Draw data if available
+                    if (this.data.responseTime.length > 1) {
+                        this.drawLine(this.data.responseTime, '#667eea', 'Response Time');
+                    }
+                    
+                    if (this.data.requestRate.length > 1) {
+                        this.drawLine(this.data.requestRate, '#28a745', 'Request Rate');
+                    }
+                    
+                    if (this.data.errorRate.length > 1) {
+                        this.drawLine(this.data.errorRate, '#dc3545', 'Error Rate');
+                    }
+                },
+                
+                drawLine: function(data, color, label) {
+                    if (data.length < 2) return;
+                    
+                    const maxValue = Math.max(...data);
+                    const minValue = Math.min(...data);
+                    const range = maxValue - minValue || 1;
+                    
+                    this.ctx.strokeStyle = color;
+                    this.ctx.lineWidth = 2;
+                    this.ctx.beginPath();
+                    
+                    for (let i = 0; i < data.length; i++) {
+                        const x = (this.canvas.width / (data.length - 1)) * i;
+                        const y = this.canvas.height - ((data[i] - minValue) / range) * this.canvas.height;
+                        
+                        if (i === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    
+                    this.ctx.stroke();
+                }
+            };
+        }
+
+        // Initialize scenarios
+        document.addEventListener('DOMContentLoaded', function() {
+            initChart();
+            
+            // Scenario selection
+            document.querySelectorAll('.scenario-card').forEach(card => {
+                card.addEventListener('click', function() {
+                    document.querySelectorAll('.scenario-card').forEach(c => c.classList.remove('active'));
+                    this.classList.add('active');
+                    testState.currentScenario = this.dataset.scenario;
+                    updateScenarioParameters();
+                });
+            });
+            
+            // Set default scenario
+            document.querySelector('[data-scenario="burst"]').classList.add('active');
+        });
+
+        function updateScenarioParameters() {
+            const rpsInput = document.getElementById('requestsPerSecond');
+            const durationInput = document.getElementById('testDuration');
+            
+            switch(testState.currentScenario) {
+                case 'burst':
+                    rpsInput.value = 50;
+                    durationInput.value = 10;
+                    break;
+                case 'sustained':
+                    rpsInput.value = 10;
+                    durationInput.value = 60;
+                    break;
+                case 'gradual':
+                    rpsInput.value = 5;
+                    durationInput.value = 120;
+                    break;
+                case 'custom':
+                    // Keep current values
+                    break;
+            }
+        }
+
+        function startTest() {
+            if (testState.isRunning) return;
+            
+            // Validate inputs
+            const apiUrl = document.getElementById('apiUrl').value;
+            if (!apiUrl) {
+                logMessage('Please enter an API URL', 'error');
+                return;
+            }
+            
+            // Reset state
+            testState = {
+                ...testState,
+                isRunning: true,
+                isPaused: false,
+                startTime: Date.now(),
+                requestsSent: 0,
+                successCount: 0,
+                rateLimitCount: 0,
+                errorCount: 0,
+                responseTimes: [],
+                activeRequests: 0
+            };
+            
+            logMessage('🚀 Starting rate limiter test...', 'info');
+            updateUI();
+            
+            // Start the test based on selected scenario
+            switch(testState.currentScenario) {
+                case 'burst':
+                    runBurstTest();
+                    break;
+                case 'sustained':
+                    runSustainedTest();
+                    break;
+                case 'gradual':
+                    runGradualTest();
+                    break;
+                case 'custom':
+                    runCustomTest();
+                    break;
+            }
+        }
+
+        function runBurstTest() {
+            const requestsPerSecond = parseInt(document.getElementById('requestsPerSecond').value);
+            const testDuration = parseInt(document.getElementById('testDuration').value);
+            const maxConcurrent = parseInt(document.getElementById('maxConcurrent').value);
+            
+            logMessage(`Starting burst test: ${requestsPerSecond} RPS for ${testDuration} seconds`, 'info');
+            
+            let requestCount = 0;
+            const totalRequests = requestsPerSecond * testDuration;
+            const interval = 1000 / requestsPerSecond; // ms between requests
+            
+            testState.testInterval = setInterval(() => {
+                if (!testState.isRunning || testState.isPaused) return;
+                
+                if (requestCount >= totalRequests) {
+                    stopTest();
+                    return;
+                }
+                
+                if (testState.activeRequests < maxConcurrent) {
+                    makeRequest();
+                    requestCount++;
+                }
+                
+                updateProgress((requestCount / totalRequests) * 100);
+            }, interval);
+        }
+
+        function runSustainedTest() {
+            const requestsPerSecond = parseInt(document.getElementById('requestsPerSecond').value);
+            const testDuration = parseInt(document.getElementById('testDuration').value);
+            
+            logMessage(`Starting sustained test: ${requestsPerSecond} RPS for ${testDuration} seconds`, 'info');
+            
+            let elapsedTime = 0;
+            
+            testState.testInterval = setInterval(() => {
+                if (!testState.isRunning || testState.isPaused) return;
+                
+                elapsedTime += 1000;
+                if (elapsedTime >= testDuration * 1000) {
+                    stopTest();
+                    return;
+                }
+                
+                // Send requests at steady rate
+                for (let i = 0; i < requestsPerSecond; i++) {
+                    setTimeout(() => {
+                        if (testState.isRunning && !testState.isPaused) {
+                            makeRequest();
+                        }
+                    }, (i * 1000) / requestsPerSecond);
+                }
+                
+                updateProgress((elapsedTime / (testDuration * 1000)) * 100);
+            }, 1000);
+        }
+
+        function runGradualTest() {
+            const maxRPS = parseInt(document.getElementById('requestsPerSecond').value);
+            const testDuration = parseInt(document.getElementById('testDuration').value);
+            
+            logMessage(`Starting gradual test: 1 to ${maxRPS} RPS over ${testDuration} seconds`, 'info');
+            
+            let currentRPS = 1;
+            let elapsedTime = 0;
+            
+            testState.testInterval = setInterval(() => {
+                if (!testState.isRunning || testState.isPaused) return;
+                
+                elapsedTime += 1000;
+                if (elapsedTime >= testDuration * 1000) {
+                    stopTest();
+                    return;
+                }
+                
+                // Gradually increase RPS
+                currentRPS = Math.min(maxRPS, Math.ceil((elapsedTime / (testDuration * 1000)) * maxRPS));
+                
+                // Send requests at current rate
+                for (let i = 0; i < currentRPS; i++) {
+                    setTimeout(() => {
+                        if (testState.isRunning && !testState.isPaused) {
+                            makeRequest();
+                        }
+                    }, (i * 1000) / currentRPS);
+                }
+                
+                updateProgress((elapsedTime / (testDuration * 1000)) * 100);
+                document.getElementById('currentRPS').textContent = currentRPS;
+            }, 1000);
+        }
+
+        function runCustomTest() {
+            // Use the basic sustained test pattern for custom scenario
+            runSustainedTest();
+        }
+
+        async function makeRequest() {
+            if (!testState.isRunning || testState.isPaused) return;
+            
+            testState.activeRequests++;
+            testState.requestsSent++;
+            
+            const apiUrl = document.getElementById('apiUrl').value;
+            const method = document.getElementById('httpMethod').value;
+            const timeout = parseInt(document.getElementById('timeout').value);
+            
+            let headers = {};
+            let body = null;
+            
+            try {
+                const headersText = document.getElementById('headers').value;
+                if (headersText) {
+                    headers = JSON.parse(headersText);
+                }
+                
+                const bodyText = document.getElementById('requestBody').value;
+                if (bodyText && (method === 'POST' || method === 'PUT')) {
+                    body = bodyText;
+                    headers['Content-Type'] = headers['Content-Type'] || 'application/json';
+                }
+            } catch (e) {
+                logMessage('Invalid JSON in headers or body', 'error');
+                testState.activeRequests--;
+                return;
+            }
+            
+            const startTime = Date.now();
+            
+            try {
+                // Create AbortController for timeout
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), timeout);
+                
+                const response = await fetch(apiUrl, {
+                    method: method,
+                    headers: headers,
+                    body: body,
+                    signal: controller.signal
+                });
+                
+                clearTimeout(timeoutId);
+                const responseTime = Date.now() - startTime;
+                testState.responseTimes.push(responseTime);
+                
+                // Determine response type
+                if (response.status === 429) {
+                    testState.rateLimitCount++;
+                    logMessage(`Rate limited: ${response.status} - ${responseTime}ms`, 'warning');
+                } else if (response.ok) {
+                    testState.successCount++;
+                    logMessage(`Success: ${response.status} - ${responseTime}ms`, 'success');
+                } else {
+                    testState.errorCount++;
+                    logMessage(`Error: ${response.status} - ${responseTime}ms`, 'error');
+                }
+                
+                // Update chart data
+                updateChartData(responseTime, response.status);
+                
+            } catch (error) {
+                const responseTime = Date.now() - startTime;
+                testState.errorCount++;
+                
+                if (error.name === 'AbortError') {
+                    logMessage(`Timeout after ${timeout}ms`, 'error');
+                } else {
+                    logMessage(`Network error: ${error.message}`, 'error');
+                }
+            } finally {
+                testState.activeRequests--;
+                updateUI();
+            }
+        }
+
+        function updateChartData(responseTime, status) {
+            const now = new Date().toLocaleTimeString();
+            testState.chartData.labels.push(now);
+            testState.chartData.responseTime.push(responseTime);
+            
+            // Calculate current request rate (requests in last second)
+            const
